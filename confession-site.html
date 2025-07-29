@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anonymous Confession Site</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    input, textarea, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+    .hidden { display: none; }
+    .profile-photo {
+      width: 120px;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 50%;
+      margin-bottom: 10px;
+    }
+    .confession-box {
+      background: #f9f9f9;
+      padding: 10px;
+      border-left: 4px solid #007bff;
+      margin-top: 10px;
+      border-radius: 6px;
+    }
+    .link-box {
+      margin-top: 10px;
+      background: #e9ecef;
+      padding: 10px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container" id="authSection">
+    <h2>Create Account</h2>
+    <input type="text" id="newUsername" placeholder="Username">
+    <input type="password" id="newPassword" placeholder="Password">
+    <input type="file" id="newPhoto">
+    <textarea id="newIntro" placeholder="Write your self-introduction..."></textarea>
+    <button onclick="registerUser()">Create Account</button>
+
+    <h3 style="margin-top:30px">Login</h3>
+    <input type="text" id="loginUsername" placeholder="Username">
+    <input type="password" id="loginPassword" placeholder="Password">
+    <button onclick="loginUser()">Login</button>
+  </div>
+
+  <div class="container hidden" id="profileSection">
+    <div style="text-align:center">
+      <img id="profilePic" class="profile-photo" src="">
+      <h2 id="profileName"></h2>
+      <p id="profileIntro"></p>
+    </div>
+    <div class="link-box">
+      Share your profile link: 
+      <input type="text" id="profileLink" readonly>
+    </div>
+    <h3>Your Confessions:</h3>
+    <div id="confessionList"></div>
+  </div>
+
+  <div class="container hidden" id="confessSection">
+    <div style="text-align:center">
+      <img id="targetPic" class="profile-photo" src="">
+      <h2 id="targetName"></h2>
+      <p id="targetIntro"></p>
+    </div>
+    <textarea id="confessionText" placeholder="Write your anonymous message..."></textarea>
+    <button onclick="submitConfession()">Send Confession</button>
+  </div>
+
+<script>
+let users = {};
+let currentUser = null;
+
+function registerUser() {
+  const uname = document.getElementById('newUsername').value.trim();
+  const pwd = document.getElementById('newPassword').value.trim();
+  const intro = document.getElementById('newIntro').value.trim();
+  const file = document.getElementById('newPhoto').files[0];
+
+  if (!uname || !pwd || !intro) return alert('Please fill all fields');
+  if (users[uname]) return alert('Username already exists');
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    users[uname] = {
+      password: pwd,
+      intro: intro,
+      photo: e.target.result,
+      confessions: []
+    };
+    alert('Account created! Now login.');
+  };
+  if (file) reader.readAsDataURL(file);
+  else {
+    users[uname] = {
+      password: pwd,
+      intro: intro,
+      photo: '',
+      confessions: []
+    };
+    alert('Account created! Now login.');
+  }
+}
+
+function loginUser() {
+  const uname = document.getElementById('loginUsername').value.trim();
+  const pwd = document.getElementById('loginPassword').value.trim();
+
+  if (!users[uname]) return alert('User not found');
+  if (users[uname].password !== pwd) return alert('Wrong password');
+
+  currentUser = uname;
+  showProfile();
+}
+
+function showProfile() {
+  const user = users[currentUser];
+  document.getElementById('profileName').textContent = currentUser;
+  document.getElementById('profileIntro').textContent = user.intro;
+  document.getElementById('profilePic').src = user.photo || 'https://via.placeholder.com/120';
+  document.getElementById('profileLink').value = window.location.href.split('?')[0] + '?to=' + encodeURIComponent(currentUser);
+  renderConfessions();
+  showSection('profileSection');
+}
+
+function renderConfessions() {
+  const box = document.getElementById('confessionList');
+  const confs = users[currentUser].confessions;
+  box.innerHTML = confs.length ? confs.map(msg => `<div class='confession-box'>${msg}</div>`).join('') : '<p>No messages yet.</p>';
+}
+
+function submitConfession() {
+  const msg = document.getElementById('confessionText').value.trim();
+  if (!msg) return alert('Type a message.');
+  users[confessTo].confessions.push(msg);
+  alert('Message sent!');
+  document.getElementById('confessionText').value = '';
+}
+
+function showSection(id) {
+  document.getElementById('authSection').classList.add('hidden');
+  document.getElementById('profileSection').classList.add('hidden');
+  document.getElementById('confessSection').classList.add('hidden');
+  document.getElementById(id).classList.remove('hidden');
+}
+
+let confessTo = null;
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.has('to')) {
+  confessTo = urlParams.get('to');
+  if (!users[confessTo]) {
+    users[confessTo] = {
+      password: '',
+      intro: 'This user has not written an intro yet.',
+      photo: '',
+      confessions: []
+    };
+  }
+  const u = users[confessTo];
+  document.getElementById('targetName').textContent = confessTo;
+  document.getElementById('targetIntro').textContent = u.intro;
+  document.getElementById('targetPic').src = u.photo || 'https://via.placeholder.com/120';
+  showSection('confessSection');
+}
+</script>
+
+</body>
+</html>
